@@ -97,6 +97,18 @@ sheet_write(leas, ss = ss, sheet = "LEAs Considered")
            
 
 
+el_lang <- tbl(con, "EL_LANG") %>%
+    filter(COUNTY == "Santa Clara" | COUNTY == "Riverside" | COUNTY == "Monterey"
+           #        CountyName == "Monterey",
+           #        CharterSchool == "All",
+           #           DASS == "All"
+    ) %>%
+    #    select(AcademicYear, ReportingCategory, Seal_of_Biliteracy_Count, Seal_of_Biliteracy_Rate) %>%
+    #    head(50) %>% 
+    collect() 
+
+
+
 
 
 
@@ -112,12 +124,25 @@ undup <- tbl(con, "UPC") %>%
     ) %>%
     #    select(AcademicYear, ReportingCategory, Seal_of_Biliteracy_Count, Seal_of_Biliteracy_Rate) %>%
     #    head(50) %>% 
-    collect() 
+    collect() %>%
+    left_join(caaspp.all) %>%
+    filter(low_grade %notin% c(5,6,7,8,9)  ) %>%
+    mutate(frpm.perc = unduplicated_frpm_eligible_count/total_enrollment,
+           el.perc = english_learner_el/ total_enrollment,
+           percentage_standard_met_and_above = as.numeric(percentage_standard_met_and_above)/100,
+           cds = glue("{county_code}{district_code}{school_code}")) %>%
+    select(county_name:school_name, cds, total_enrollment,  percentage_standard_met_and_above, frpm.perc, el.perc ) %>%
+    arrange(county_name,desc(percentage_standard_met_and_above)) 
+    
 
 
+el_lang2 <- el_lang %>%
+    filter(YEAR == max(YEAR),
+        CDS %in% undup$cds,
+           TOTAL_EL >= 10) 
 
 
-undup %>%
+undup.tbl <- undup %>%
     left_join(caaspp.all) %>%
     filter(low_grade %notin% c(5,6,7,8,9)  ) %>%
     select(county_name:school_name, total_enrollment, unduplicated_frpm_eligible_count, english_learner_el, percentage_standard_met_and_above) %>%
@@ -140,5 +165,7 @@ undup %>%
     data_color(columns = c( frpm.perc,el.perc),
                colors = scales::col_numeric(palette = c(
                      "purple", "orange"),
-                   domain = NULL)) %>%
-    gtsave("Schools Table.png")
+                   domain = NULL)) 
+
+
+gtsave("Schools Table.png")
