@@ -78,6 +78,14 @@ caaspp2 <- caaspp %>%
     select(County_Code:School_Code, Subgroup_ID, definition, Students_Tested, Percentage_Standard_Met_and_Above ,Test_Year, Grade) %>%
     left_join(entit )
 
+caaspp.subs <- caaspp2 %>%
+    filter(School_Code == "0000000") %>%
+    mutate(all = case_when(District_Code == "65961" ~ 37.59,
+                           District_Code == "75242" ~ 51.75,
+                           District_Code == "69369" ~ 40.10),
+           from.all =  as.numeric(Percentage_Standard_Met_and_Above) - all) %>%
+    arrange(District_Code ,from.all)
+
 
 caaspp.all <- caaspp2 %>%
     filter(definition == "All Students") %>%
@@ -143,14 +151,7 @@ el_lang2 <- el_lang %>%
 
 
 undup.tbl <- undup %>%
-    left_join(caaspp.all) %>%
-    filter(low_grade %notin% c(5,6,7,8,9)  ) %>%
-    select(county_name:school_name, total_enrollment, unduplicated_frpm_eligible_count, english_learner_el, percentage_standard_met_and_above) %>%
-    mutate(frpm.perc = unduplicated_frpm_eligible_count/total_enrollment,
-           el.perc = english_learner_el/ total_enrollment,
-           percentage_standard_met_and_above = as.numeric(percentage_standard_met_and_above)/100) %>%
-    select(-unduplicated_frpm_eligible_count, -english_learner_el) %>%
-    arrange(county_name,desc(percentage_standard_met_and_above)) %>%
+    filter(!str_detect(school_name,"Clyde")) %>%
     gt(rowname_col = "school_name", groupname_col = c("county_name", "district_name")) %>%
     fmt_percent(columns = c(percentage_standard_met_and_above, frpm.perc,el.perc), decimals = 0)  %>%
     cols_label(total_enrollment = "Total\nEnrollment",
@@ -165,7 +166,50 @@ undup.tbl <- undup %>%
     data_color(columns = c( frpm.perc,el.perc),
                colors = scales::col_numeric(palette = c(
                      "purple", "orange"),
-                   domain = NULL)) 
+                   domain = NULL)) %>%
+    tab_header(title = "School Characteristics", subtitle = NULL)
 
 
-gtsave("Schools Table.png")
+gtsave(undup.tbl,"Schools Table.png")
+
+
+
+
+
+enroll <- tbl(con, "ENROLLMENT") %>%
+    filter(YEAR == max(YEAR)) %>%
+    # filter(county_code == "27"|county_code == "33"|county_code == "43",
+    #        district_code == "65961"| district_code == "75242"  |district_code == "69369",
+    #        academic_year == max(academic_year),
+    #        school_type == "Elementary Schools (Public)",
+    #        charter_school_y_n == "No"
+    #        #        CountyName == "Monterey",
+    #        #        CharterSchool == "All",
+    #        #           DASS == "All"
+    # ) %>%
+    #    select(AcademicYear, ReportingCategory, Seal_of_Biliteracy_Count, Seal_of_Biliteracy_Rate) %>%
+ #       head(50) %>% 
+    collect() 
+
+enroll.us <- enroll %>%
+    filter(CDS_CODE %in% undup$cds) %>%
+ #   filter(str_detect(CDS_CODE, "2765961|3375242|4369369")) %>%
+    select(YEAR:GR_5) %>%
+    pivot_longer(cols = c(KDGN:GR_5),
+                 values_to = "students") %>%
+    group_by(CDS_CODE, ETHNIC) %>%
+    mutate(group.students = sum(students)) %>%
+    select(YEAR:ETHNIC,group.students) %>%
+    distinct()
+
+enroll.dis <- enroll.us %>%
+    group_by(DISTRICT, ETHNIC) %>%
+    mutate(dis.students = sum(group.students))%>%
+    select(DISTRICT,ETHNIC,dis.students) %>%
+    distinct() %>%
+    group_by(DISTRICT) %>%
+    mutate(perc = dis.students*100/sum(dis.students))
+
+
+county_code == "2765961"|county_code == "3375242"|county_code == "4369369",
+district_code == ""| district_code == ""  |district_code == "",
