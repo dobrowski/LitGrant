@@ -173,7 +173,7 @@ undup.tbl <- undup %>%
 gtsave(undup.tbl,"Schools Table.png")
 
 
-
+### Enrollment ----
 
 
 enroll <- tbl(con, "ENROLLMENT") %>%
@@ -213,3 +213,34 @@ enroll.dis <- enroll.us %>%
 
 county_code == "2765961"|county_code == "3375242"|county_code == "4369369",
 district_code == ""| district_code == ""  |district_code == "",
+
+
+
+
+
+### Teachers -----
+
+
+
+teachers <- tbl(con, "STAFF_DEMO") %>%
+    filter(YEAR == max(YEAR),
+           DistrictCode == "2765961"|DistrictCode == "3375242"|DistrictCode == "4369369",
+           FTE_Teaching > 0
+           ) %>%
+    #       head(50) %>% 
+collect() 
+
+
+teach.eth <- teachers %>% 
+    tabyl(DistrictName,EthnicGroup) %>%
+    pivot_longer(cols = `0`:`9`) %>%
+    group_by(DistrictName) %>%
+    mutate(perc = value*100/sum(value))
+
+
+
+teach.ed <- teachers %>% 
+    tabyl(DistrictName,EducationLevel) %>%
+    pivot_longer(cols = A:Y) %>%
+    group_by(DistrictName) %>%
+    mutate(perc = value*100/sum(value))
