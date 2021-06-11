@@ -26,7 +26,7 @@ districts <- c("Val Verde",
                "Alisal",
                "Alum Rock")
 
-caaspp, 
+
 
 con <- MCOE::mcoe_sql_con()
 
@@ -117,7 +117,7 @@ el_lang <- tbl(con, "EL_LANG") %>%
 
 
 
-
+### Unduplicated ----
 
 
 undup <- tbl(con, "UPC") %>%
@@ -211,8 +211,16 @@ enroll.dis <- enroll.us %>%
     mutate(perc = dis.students*100/sum(dis.students))
 
 
-county_code == "2765961"|county_code == "3375242"|county_code == "4369369",
-district_code == ""| district_code == ""  |district_code == "",
+###  SWD enrollment ----
+
+
+swd <- tbl(con, "DASH_CENSUS") %>%
+  filter(YEAR == max(YEAR),
+         studentgroup == "SWD",
+         cds == "27659610000000"|cds == "33752420000000"|cds == "43693690000000"  ) %>%
+         head(50) %>% 
+collect() 
+
 
 
 
